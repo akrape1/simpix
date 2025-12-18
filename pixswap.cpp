@@ -35,7 +35,7 @@ inline int R(UInt_t p) { return (p >> 16) & 0xFF; }
 inline int G(UInt_t p) { return (p >> 8) & 0xFF; }
 inline int B(UInt_t p) { return (p) & 0xFF; }
 
-//treat RGB like xyz so we can do our normal distance formula. The further two colors are, the higher the energy
+//treat RGB like xyz so we can do our normal distance formula. The further two colors are, the higher the energy (worse match)
 inline double pixEnergy(UInt_t src, UInt_t tgt) {
   const double dr = R(src) - R(tgt);
   const double dg = G(src) - G(tgt);
@@ -79,7 +79,7 @@ void pixswap() {
   TASImage srcImg(SRC_IMAGE);
   TASImage tgtImg(TGT_IMAGE);
 
-  int w = srcImg.GetWidth(); //1920, could hardcode it 
+  int w = srcImg.GetWidth(); //1920, could've hardcoded it 
   int h = srcImg.GetHeight(); //1080
   int N = w * h; //number of pixels so 1920*1080=2073600
   
@@ -100,7 +100,7 @@ void pixswap() {
   std::sort(srcK.begin(), srcK.end());
   std::sort(tgtK.begin(), tgtK.end());
 
-  //list the original positions now that they're sorted by RGB
+  //list the original positions now that they're sorted by RGB (so [0,1,2,3] may have become [2,1,3,0] when sorted)
   std::vector<int> srcOrder(N);
   std::vector<int> tgtOrder(N);
   for (int i = 0; i < N; ++i) {
@@ -142,8 +142,9 @@ void pixswap() {
     int mi = mapping[i];
     int mj = mapping[j];
 
+    //dE = E_f - E_i -> (Energy for map(j) with i + map(i) with j) - (Energy for map(i) with i + energy for map(j) with j)
     double dE = pixEnergy(srcPix[mj], tgtPix[i]) + pixEnergy(srcPix[mi], tgtPix[j]) - 
-    pixEnergy(srcPix[mi], tgtPix[i]) - pixEnergy(srcPix[mj], tgtPix[j]);
+        pixEnergy(srcPix[mi], tgtPix[i]) - pixEnergy(srcPix[mj], tgtPix[j]);
 
     //metropolis algorithm
     if (dE <= 0.0 || rng.Rndm() < std::exp(-dE / T)) {
